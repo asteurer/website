@@ -18,6 +18,9 @@
         font-size: 20px;
         font-weight: bold;
     }
+    header span {
+        font-size: 16px;
+    }
     header .link {
     font-size: 16px;
     }
@@ -45,7 +48,7 @@
 <body>
 <header>
     {{ .Resume.Person.FirstName }} {{ .Resume.Person.LastName }}<br>
-    {{ .Resume.Person.Location }}<br>
+    <span>{{ .Resume.Person.Location }}<span><br>
     <a href="http://{{ .Resume.Person.Github }}" class="link">{{ .Resume.Person.Github }}</a><br>  
     <a href="http://{{ .Resume.Person.Linkedin }}" class="link">{{ .Resume.Person.Linkedin }}</a>
 </header>

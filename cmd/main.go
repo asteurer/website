@@ -290,7 +290,14 @@ func placeResumeJSON(c *gin.Context) {
 		}
 		log.Print("SUCCESS: person")
 
-		if err = InsertEducation(db, c.Request.Context(), sqlQueries["./sql/resume.sql"]["InsertEducation"], education, personId); err != nil {
+		if err = InsertEducation(
+			db,
+			c.Request.Context(),
+			sqlQueries["./sql/resume.sql"]["InsertEducation"],
+			sqlQueries["./sql/resume.sql"]["DeleteEducation"],
+			education,
+			personId,
+		); err != nil {
 			log.Printf("SQL error: %v", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -303,6 +310,8 @@ func placeResumeJSON(c *gin.Context) {
 			sqlQueries["./sql/resume.sql"]["InsertEmployer"],
 			sqlQueries["./sql/resume.sql"]["InsertJob"],
 			sqlQueries["./sql/resume.sql"]["InsertJobExperience"],
+			sqlQueries["./sql/resume.sql"]["DeleteJobs"],
+			sqlQueries["./sql/resume.sql"]["DeleteJobExperiences"],
 			jobs,
 			personId,
 		); err != nil {
@@ -317,6 +326,8 @@ func placeResumeJSON(c *gin.Context) {
 			c.Request.Context(),
 			sqlQueries["./sql/resume.sql"]["InsertProject"],
 			sqlQueries["./sql/resume.sql"]["InsertProjectContribution"],
+			sqlQueries["./sql/resume.sql"]["DeleteProjects"],
+			sqlQueries["./sql/resume.sql"]["DeleteProjectContributions"],
 			projects,
 			personId,
 		); err != nil {
@@ -331,6 +342,7 @@ func placeResumeJSON(c *gin.Context) {
 			c.Request.Context(),
 			sqlQueries["./sql/resume.sql"]["InsertCertifyingOrg"],
 			sqlQueries["./sql/resume.sql"]["InsertCertification"],
+			sqlQueries["./sql/resume.sql"]["DeleteCertifications"],
 			certs,
 			personId,
 		); err != nil {

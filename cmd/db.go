@@ -119,10 +119,15 @@ func SelectEducation(db *sql.DB, ctx context.Context, query string, personId int
 	return education, nil
 }
 
-func InsertEducation(db *sql.DB, ctx context.Context, query string, education []Education, personId int) error {
+func InsertEducation(db *sql.DB, ctx context.Context, insertQuery, deleteQuery string, education []Education, personId int) error {
+	_, err := db.Exec(deleteQuery, personId) // Deleting the existing records to allow for clean update
+	if err != nil {
+		return err
+	}
+
 	for _, degree := range education {
-		_, err := db.Exec(
-			query,
+		_, err = db.Exec(
+			insertQuery,
 			personId,
 			degree.Institution,
 			degree.Degree,
@@ -203,10 +208,33 @@ func SelectJobs(db *sql.DB, ctx context.Context, query string, personId int) ([]
 }
 
 // InsertJobs inserts multiple job records and their associated experiences into the database.
-func InsertJobs(db *sql.DB, ctx context.Context, employerQuery, jobQuery, experienceQuery string, jobs []Job, personId int) error {
+func InsertJobs(db *sql.DB, ctx context.Context, employerQuery, jobQuery, experienceQuery, deleteJobsQuery, deleteExperiencesQuery string, jobs []Job, personId int) error {
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	rows, err := db.QueryContext(ctx, "SELECT id FROM job WHERE person_id = ?;", personId)
+	if err != nil {
+		return fmt.Errorf("error retrieving job.id: %w", err)
+	}
+
+	for rows.Next() {
+		var jobId int
+		rows.Scan(&jobId)
+
+		_, err = executeNonQuery(ctx, tx, deleteExperiencesQuery, jobId) // Deleting the existing records to allow for clean update
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to delete job experiences: %w", err)
+		}
+	}
+
+	_, err = executeNonQuery(ctx, tx, deleteJobsQuery, personId) // Deleting the existing records to allow for clean update
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete jobs: %w", err)
 	}
 
 	for _, job := range jobs {
@@ -299,10 +327,32 @@ func SelectProjects(db *sql.DB, ctx context.Context, query string, personId int)
 	return projects, nil
 }
 
-func InsertProjects(db *sql.DB, ctx context.Context, projectQuery, contributionQuery string, projects []Project, personId int) error {
+func InsertProjects(db *sql.DB, ctx context.Context, projectQuery, contributionQuery, deleteProjectsQuery, deleteContributionsQuery string, projects []Project, personId int) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	rows, err := db.QueryContext(ctx, "SELECT id FROM project WHERE person_id = ?", personId)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve project.id: %w", err)
+	}
+
+	for rows.Next() {
+		var projectId int
+		rows.Scan(&projectId)
+
+		_, err = executeNonQuery(ctx, tx, deleteContributionsQuery, projectId) // Deleting the existing records to allow for clean update
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to delete contributions: %w", err)
+		}
+	}
+
+	_, err = executeNonQuery(ctx, tx, deleteProjectsQuery, personId) // Deleting the existing records to allow for clean update
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete projects: %w", err)
 	}
 
 	for _, project := range projects {
@@ -372,10 +422,16 @@ func SelectCertifications(db *sql.DB, ctx context.Context, query string, personI
 	return certifications, nil
 }
 
-func InsertCertifications(db *sql.DB, ctx context.Context, orgQuery, certQuery string, certs []Certification, personId int) error {
+func InsertCertifications(db *sql.DB, ctx context.Context, orgQuery, certQuery, deleteCertsQuery string, certs []Certification, personId int) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	_, err = executeNonQuery(ctx, tx, deleteCertsQuery, personId) // Deleting the existing records to allow for clean update
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete certification: %w", err)
 	}
 
 	for _, cert := range certs {

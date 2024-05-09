@@ -51,6 +51,9 @@ SELECT
 FROM education
 WHERE person_id = ?;
 
+--name: DeleteEducation
+DELETE FROM education WHERE person_id = ?;
+
 --name: InsertEducation
 INSERT INTO education (
     person_id,
@@ -84,6 +87,12 @@ LEFT JOIN job
 LEFT JOIN employer
     ON employer.id = job.employer_id
 WHERE job.person_id = ?;
+
+--name: DeleteJobs
+DELETE FROM job WHERE person_id = ?;
+
+--name: DeleteJobExperiences
+DELETE FROM job_experience WHERE job_id = ?;
 
 --name: InsertEmployer
 INSERT INTO employer (name, location) 
@@ -126,6 +135,12 @@ LEFT JOIN project
     ON project.id = project_contribution.project_id
 WHERE project.person_id = ?;
 
+--name: DeleteProjects
+DELETE FROM project WHERE person_id = ?;
+
+--name: DeleteProjectContributions
+DELETE FROM project_contribution WHERE project_id = ?;
+
 --name: InsertProject
 INSERT INTO project (
     person_id,
@@ -157,6 +172,9 @@ FROM certification
 LEFT JOIN certifying_organization
     ON certifying_organization.id = certification.organization_id
 WHERE certification.person_id = ?;
+
+--name: DeleteCertifications
+DELETE FROM certification WHERE person_id = ?;
 
 --name: InsertCertifyingOrg
 INSERT INTO certifying_organization (name) 
