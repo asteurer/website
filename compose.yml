@@ -1,0 +1,28 @@
+version: '2.27'
+services:
+  database:
+    build: .
+    image: asteurer/test_database
+    restart: always
+    container_name: db
+    shm_size: 128mb
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  api:
+    build: .
+    ports:
+    - "80:8080"
+    image: asteurer/test_api
+    restart: always
+    container_name: app
+    shm_size: 128mb
+    environment:
+      DATABASE_HOST: database
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    depends_on:
+      - database

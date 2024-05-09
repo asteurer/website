@@ -1,0 +1,98 @@
+[{
+    "person": {
+        "firstName": "Andrew"
+        , "lastName": "Steurer"
+        , "location": "Logan, UT"
+        , "github": "github.com/asteurer"
+        , "linkedin": "linkedin.com/in/asteurer"
+        , "summary": "Computer Science undergraduate student passionate about automating manual tasks with substantial hands-on experience in Amazon Web Services. A self-motivated learner who can apply previous experience and novel, creative solutions to solve problems."
+        , "proficiencies": "Python, Amazon Web Services S3, Amazon Web Services Lambda, Google Apps Script, PostgreSQL, Git"
+        , "familiarities": "Linux, Docker, Kubernetes, Golang, JavaScript, Java, Terraform, Amazon Web Services EC2, Amazon Web Services SNS, Amazon Web Services IAM, GitHub Actions, Amazon Web Services EKS, Amazon Web Services EKS, Amazon Web Services Route 53, Amazon Web Services SNS, Amazon Web Services IAM"
+    }
+    , "education": [
+        {
+            "institution": "Western Governors University"
+            , "degree": "Bachelor of Science, Computer Science"
+            , "duration": "Aug 2022 - Mar 2024"
+            , "gpa": "3.46/4.00"
+            , "specialNotes": "Completed degree (with 18 transfer credits) in just over 1.5 years."
+        }
+    ]
+    , "work_experience": [
+        {
+            "employer": "Conservice"
+            , "title": "Data and Reporting Analyst"
+            , "location": "Logan, UT"
+            , "duration": "Jul 2023 - Present"
+            , "technologies": "Python, Pandas, Amazon Web Services, Google Apps Script"
+            , "experiences": [
+                "Collaborated with Conservice’s executive team to better-understand the business through quantitative and qualitative analysis."
+                , "Performed complex analyses on large datasets (over 10 million data points) using Python’s Pandas library while keeping runtimes under 5 minutes."
+                , "Built, maintained, and improved automated processes for 5 different teams saving over 20 hours of manual work a week."
+            ]
+        }
+        , {
+            "employer": "Conservice"
+            , "title": "Vendor Management Assistant Team Lead"
+            , "location": "Logan, UT"
+            , "duration": "Jan 2022 - Jul 2023"
+            , "technologies": "JavaScript, Google Apps Script"
+            , "experiences": [
+                "Designed and built automation solutions for manual processes across 8 different teams, saving over 100 hours of work a week and reducing manual errors by more than 60%."
+                , "Trained offshore managers how to integrate automated solutions into their workflow. The team showed an 84.34% efficiency increase post-training."
+            ]
+        }
+    ]
+
+    , "projects": [
+        {
+            "name": "AWS Textract Pipeline"
+            , "repository": "github.com/asteurer/aws-textract-pipeline"
+            , "technologies":  "Python, Amazon Web Services Lambda, Amazon Web Services S3, Amazon Web Services SNS, Amazon Web Services IAM, Terraform"
+            , "contributions": [
+                "Architected and built a serverless pipeline to and from Amazon Web Services Textract which has scraped text from more than 10,000 multi-page PDF images."
+            ]
+        }
+        , {
+            "name": "Package Delivery Algorithm"
+            , "repository": "github.com/asteurer/package-delivery-algorithm"
+            , "technologies": "Python"
+            , "contributions": [
+                "Designed a nearest-neighbor algorithm with a custom hash table that delivers packages to various addresses before a deadline, within delivery truck mileage constraints, and individual package requirements. "
+            ]
+        }
+        , {
+            "name": "Resume API"
+            , "repository": "github.com/asteurer/resume-api"
+            , "technologies": "Python, Flask, Docker, Kubernetes, GitHub Actions, Linux, Amazon Web Services EC2, Amazon Web Services EKS, Amazon Web Services Route53"
+            , "contributions": [
+                "Built a containerized REST API that uses Flask to listen for web requests and gets data from and posts data to a PostgreSQL database."
+                , "Created a CI/CD pipeline using GitHub actions to build and push Docker images to DockerHub when code is pushed/merged to the master branch."
+                , "Deployed application into production using Amazon Web Services EKS. Output can be seen here : asteurer.com/api/resume/get"
+            ]
+        }
+    ]
+
+    , "certifications": [
+       
+        {   "organization": "Amazon Web Services"
+            , "certification": "AWS Certified Developer Associate"
+            , "expiration": "Nov 2026"
+        }
+        , {
+            "organization": "Amazon Web Services"
+            , "certification": "AWS Certified Cloud Practitioner"
+            , "expiration":"Nov 2026"
+        }
+        , {
+            "organization": "CompTIA"
+            , "certification": "CompTIA Project+"
+            , "expiration": "Jul 2026"
+        }
+        , {
+            "organization": "PeopleCert"
+            , "certification": "ITIL 4 Foundation"
+            , "expiration": "Jan 2027"
+        }
+    ]
+}]

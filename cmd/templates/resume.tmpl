@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume - {{ .Resume.Person.FirstName }} {{ .Resume.Person.LastName }}</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        font-size: 14px;
+        color: #333;
+    }
+    header, section {
+        margin-bottom: 20px;
+    }
+    header {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    header .link {
+    font-size: 16px;
+    }
+    h2 {
+        font-size: 16px;
+        color: #000;
+        border-bottom: 1px solid #666;
+        padding-bottom: 3px;
+    }
+    ul {
+        list-style: disc inside; /* Adjusts bullet points to be inside and display */
+        padding-left: 20px; /* Adds indentation */
+        margin-left: 0; /* Ensures alignment if needed */
+    }
+    li {
+        margin-bottom: 5px;
+        padding-left: 5px; /* Additional padding if needed */
+    }
+    .link {
+        color: #0657f9;
+        text-decoration: none;
+    }
+</style>
+</head>
+<body>
+<header>
+    {{ .Resume.Person.FirstName }} {{ .Resume.Person.LastName }}<br>
+    {{ .Resume.Person.Location }}<br>
+    <a href="http://{{ .Resume.Person.Github }}" class="link">{{ .Resume.Person.Github }}</a><br>  
+    <a href="http://{{ .Resume.Person.Linkedin }}" class="link">{{ .Resume.Person.Linkedin }}</a>
+</header>
+<section>
+    <h2>Professional Summary</h2>
+    <p>{{ .Resume.Person.Summary }}</p>
+    <ul>
+        <li><strong>Proficiencies:</strong> {{ .Resume.Person.Proficiencies }}<br>
+        <li><strong>Familiarities:</strong> {{ .Resume.Person.Familiarities }}
+    </ul>
+</section>
+<section>
+    <h2>Education</h2>
+    <ul>
+        {{ range .Resume.Education }}
+        <strong>{{ .Institution }}</strong> - {{ .Duration }} - {{ .Degree }}<br>
+        <li>GPA: {{ .Gpa }}
+        <li>{{ .SpecialNotes }}</li>
+        {{ end }}
+    </ul>
+</section>
+<section>
+    <h2>Work Experience</h2>
+    <ul>
+        {{ range .Resume.WorkExperience }}
+        <strong>{{ .Employer }} - {{ .Title }}</strong> - {{ .Duration }} - {{ .Location }}<br>
+            <ul>
+                {{ range .Experiences }}
+                <li>{{ . }}</li>
+                {{ end }}
+                <li>Technologies: {{ .Technologies }}
+            </ul>
+        </li>
+        {{ end }}
+    </ul>
+</section>
+<section>
+    <h2>Projects</h2>
+    <ul>
+        {{ range .Resume.Projects }}
+        <strong>{{ .Name }}</strong><br>
+        <a href="https://{{ .Repository }}" class="link">{{ .Repository }}</a>
+            <ul>
+                {{ range .Contributions }}
+                <li>{{ . }}</li>
+                {{ end }}
+                <li>Technologies: {{ .Technologies }}
+            </ul>
+        </li>
+         
+        {{ end }}
+    </ul>
+</section>
+<section>
+    <h2>Certifications</h2>
+    <ul>
+        {{ range .Resume.Certifications }}
+        <li>{{ .Certification }} - {{ .Organization }}, Expires: {{ .Expiration }}</li>
+        {{ end }}
+    </ul>
+</section>
+</body>
+</html>

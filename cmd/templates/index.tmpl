@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        font-size: 14px;
+        color: #333;
+    }
+    header, section {
+        margin-bottom: 20px;
+    }
+    header {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    header .link {
+        font-size: 16px;
+    }
+    h2 {
+        font-size: 16px;
+        color: #000;
+        border-bottom: 1px solid #666;
+        padding-bottom: 3px;
+    }
+    ul {
+        list-style: disc inside;
+        padding-left: 20px;
+        margin-left: 0;
+    }
+    li {
+        margin-bottom: 5px;
+        padding-left: 5px;
+    }
+    .link {
+        color: #0657f9;
+        text-decoration: none;
+    }
+    #image {
+        display: none; /* Initially hide the image */
+        max-width: 100%; /* Make sure the image is responsive */
+        height: auto;
+    }
+    </style>
+</head>
+<body>
+    <h2><strong>Resumes</strong></h2>
+    <ul>
+        <li>
+            <a href="#" onclick="playSoundAndShowImage(); return false;">Rick Astley</a>
+            <audio id="audio" src="./media/sound.mp3" preload="auto"></audio>
+            <img id="image" src="./media/image.gif" alt="Rick Astley">
+            <script>
+                function playSoundAndShowImage() {
+                    var audio = document.getElementById('audio');
+                    var image = document.getElementById('image');
+                    audio.play();
+                    image.style.display = 'block'; // Show the image
+                }
+            </script>
+        </li>
+
+        {{ range .Names }}
+            <li><a href="http://asteurer.com/resume/{{ .FirstName }}/{{ .LastName }}"> 
+                {{ .FirstName }} {{ .LastName }}</a>
+        {{ end }}
+
+    </ul>
+</body>
+</html>
