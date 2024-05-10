@@ -61,9 +61,9 @@
                 }
             </script>
         </li>
-
+        {{ $domain := .Domain }}
         {{ range .Names }}
-            <li><a href="http://{{ .Domain }}/resume/{{ .FirstName }}/{{ .LastName }}"> 
+            <li><a href="http://{{ $domain }}/resume/{{ .FirstName }}/{{ .LastName }}"> 
                 {{ .FirstName }} {{ .LastName }}</a>
         {{ end }}
 
