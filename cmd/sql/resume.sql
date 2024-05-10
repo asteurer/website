@@ -88,6 +88,9 @@ LEFT JOIN employer
     ON employer.id = job.employer_id
 WHERE job.person_id = ?;
 
+--name: SelectJobIds
+SELECT id FROM job WHERE person_id = ?;
+
 --name: DeleteJobs
 DELETE FROM job WHERE person_id = ?;
 
@@ -134,6 +137,9 @@ FROM project_contribution
 LEFT JOIN project
     ON project.id = project_contribution.project_id
 WHERE project.person_id = ?;
+
+--name: SelectProjectIds
+SELECT id FROM project WHERE person_id = ?
 
 --name: DeleteProjects
 DELETE FROM project WHERE person_id = ?;

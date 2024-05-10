@@ -1,14 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -82,7 +78,7 @@ func main() {
 	}
 	defer db.Close()
 
-	if err := loadSQLFiles("./sql"); err != nil {
+	if err := LoadSQLFiles("./sql"); err != nil {
 		log.Fatal("SQL files failed to load:", err)
 	}
 
@@ -97,75 +93,6 @@ func main() {
 	if err := router.Run("0.0.0.0:8080"); err != nil {
 		log.Fatal("server failed to start:", err)
 	}
-}
-
-func dbConnection() (*sql.DB, error) {
-	// Define database connection settings
-	dsn := os.Getenv("MYSQL_USER") + ":" + os.Getenv("MYSQL_PASSWORD") + "@tcp(database:3306)/db"
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return nil, err
-	}
-	// Verify connection with a ping
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
-// loadSQLFiles loads SQL queries from files in the specified directory.
-func loadSQLFiles(directory string) error {
-	// Open the directory
-	files, err := os.ReadDir(directory)
-	if err != nil {
-		return err
-	}
-
-	// Process each file
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".sql") {
-			err := loadSQLFile(directory + "/" + file.Name())
-			if err != nil {
-				return fmt.Errorf("error loading %s: %v", file.Name(), err)
-			}
-		}
-	}
-	return nil
-}
-
-// loadSQLFile reads an SQL file and stores its contents in a map.
-func loadSQLFile(filePath string) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	var currentQueryName string
-	queryMap := make(map[string]string)
-	var sb strings.Builder
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "--name:") {
-			if currentQueryName != "" && sb.Len() > 0 {
-				queryMap[currentQueryName] = sb.String()
-				sb.Reset()
-			}
-			currentQueryName = strings.TrimSpace(line[len("--name:"):])
-		} else {
-			sb.WriteString(line + "\n")
-		}
-	}
-
-	if currentQueryName != "" && sb.Len() > 0 {
-		queryMap[currentQueryName] = sb.String()
-	}
-
-	sqlQueries[filePath] = queryMap
-	return scanner.Err()
 }
 
 func fetchData(firstname, lastname string, ctx context.Context) (Resume, error) {
@@ -263,7 +190,20 @@ func getIndexHTML(c *gin.Context) {
 }
 
 func placeResumeJSON(c *gin.Context) {
-	log.Print("THE EAGLE HAS LANDED")
+	tokenString := c.GetHeader("Authorization")
+	if tokenString == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization token not provided"})
+	}
+
+	isValid, err := validateToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	if !isValid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
+
 	var resumes []Resume
 
 	if err := c.ShouldBindJSON(&resumes); err != nil {
@@ -272,8 +212,6 @@ func placeResumeJSON(c *gin.Context) {
 		return
 	}
 
-	log.Println("JSON bound successfully, processing resumes...")
-
 	for _, resume := range resumes {
 		person := resume.Person
 		education := resume.Education
@@ -281,14 +219,12 @@ func placeResumeJSON(c *gin.Context) {
 		projects := resume.Projects
 		certs := resume.Certifications
 
-		// Person
 		personId, err := InsertPerson(db, c.Request.Context(), sqlQueries["./sql/resume.sql"]["InsertPerson"], person)
 		if err != nil {
 			log.Printf("SQL error: %v", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		log.Print("SUCCESS: person")
 
 		if err = InsertEducation(
 			db,
@@ -302,7 +238,6 @@ func placeResumeJSON(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		log.Print("SUCCESS: education")
 
 		if err = InsertJobs(
 			db,
@@ -310,6 +245,7 @@ func placeResumeJSON(c *gin.Context) {
 			sqlQueries["./sql/resume.sql"]["InsertEmployer"],
 			sqlQueries["./sql/resume.sql"]["InsertJob"],
 			sqlQueries["./sql/resume.sql"]["InsertJobExperience"],
+			sqlQueries["./sql/resume.sql"]["SelectJobIds"],
 			sqlQueries["./sql/resume.sql"]["DeleteJobs"],
 			sqlQueries["./sql/resume.sql"]["DeleteJobExperiences"],
 			jobs,
@@ -319,13 +255,13 @@ func placeResumeJSON(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		log.Print("SUCCESS: jobs")
 
 		if err = InsertProjects(
 			db,
 			c.Request.Context(),
 			sqlQueries["./sql/resume.sql"]["InsertProject"],
 			sqlQueries["./sql/resume.sql"]["InsertProjectContribution"],
+			sqlQueries["./sql/resume.sql"]["SelectProjectIds"],
 			sqlQueries["./sql/resume.sql"]["DeleteProjects"],
 			sqlQueries["./sql/resume.sql"]["DeleteProjectContributions"],
 			projects,
@@ -335,7 +271,6 @@ func placeResumeJSON(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		log.Print("SUCCESS: projects")
 
 		if err = InsertCertifications(
 			db,
@@ -350,9 +285,8 @@ func placeResumeJSON(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		log.Print("SUCCESS: certifications")
 
-		log.Println("All resumes processed successfully.")
+		log.Println("All resumes processed successfully")
 		c.JSON(http.StatusAccepted, gin.H{"success": "resume has been posted"})
 	}
 }

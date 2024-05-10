@@ -5,7 +5,23 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 )
+
+func dbConnection() (*sql.DB, error) {
+	// Define database connection settings
+	dsn := os.Getenv("MYSQL_USER") + ":" + os.Getenv("MYSQL_PASSWORD") + "@tcp(database:3306)/db"
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+	// Verify connection with a ping
+	if err := db.Ping(); err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
 
 // executeNonQuery wraps the db.ExecContext call to reduce duplication and centralize error handling.
 func executeNonQuery(ctx context.Context, tx *sql.Tx, query string, args ...interface{}) (int64, error) {
@@ -58,7 +74,7 @@ func SelectPerson(db *sql.DB, ctx context.Context, query string, firstName, last
 		&person.Familiarities,
 	)
 
-	log.Print("SelectPerson")
+	log.Print("Person selected successfully")
 
 	return personId, person, err
 }
@@ -84,7 +100,7 @@ func InsertPerson(db *sql.DB, ctx context.Context, query string, person Person) 
 		return -1, err
 	}
 
-	log.Print("InsertPerson")
+	log.Print("Person inserted successfully")
 
 	return int(personId), nil
 }
@@ -114,20 +130,20 @@ func SelectEducation(db *sql.DB, ctx context.Context, query string, personId int
 		education = append(education, degree)
 	}
 
-	log.Print("SelectEducation")
+	log.Print("Education selected successfully")
 
 	return education, nil
 }
 
-func InsertEducation(db *sql.DB, ctx context.Context, insertQuery, deleteQuery string, education []Education, personId int) error {
-	_, err := db.Exec(deleteQuery, personId) // Deleting the existing records to allow for clean update
+func InsertEducation(db *sql.DB, ctx context.Context, insertStmt, deleteStmt string, education []Education, personId int) error {
+	_, err := db.Exec(deleteStmt, personId) // Deleting the existing records to allow for a clean update
 	if err != nil {
 		return err
 	}
 
 	for _, degree := range education {
 		_, err = db.Exec(
-			insertQuery,
+			insertStmt,
 			personId,
 			degree.Institution,
 			degree.Degree,
@@ -140,7 +156,7 @@ func InsertEducation(db *sql.DB, ctx context.Context, insertQuery, deleteQuery s
 		}
 	}
 
-	log.Print("InsertEducation")
+	log.Print("Education inserted successfully")
 
 	return nil
 }
@@ -202,59 +218,50 @@ func SelectJobs(db *sql.DB, ctx context.Context, query string, personId int) ([]
 		jobs = append(jobs, job)
 	}
 
-	log.Print("SelectJobs")
+	log.Print("Jobs selected successfully")
 
 	return jobs, nil
 }
 
-// InsertJobs inserts multiple job records and their associated experiences into the database.
-func InsertJobs(db *sql.DB, ctx context.Context, employerQuery, jobQuery, experienceQuery, deleteJobsQuery, deleteExperiencesQuery string, jobs []Job, personId int) error {
-
+func InsertJobs(
+	db *sql.DB,
+	ctx context.Context,
+	insertEmployerStmt string,
+	insertJobStmt string,
+	insertExperienceStmt string,
+	selectJobIdsQuery string,
+	deleteJobsStmt string,
+	deleteJobExperiencesStmt string,
+	jobs []Job,
+	personId int,
+) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	rows, err := db.QueryContext(ctx, "SELECT id FROM job WHERE person_id = ?;", personId)
-	if err != nil {
-		return fmt.Errorf("error retrieving job.id: %w", err)
-	}
-
-	for rows.Next() {
-		var jobId int
-		rows.Scan(&jobId)
-
-		_, err = executeNonQuery(ctx, tx, deleteExperiencesQuery, jobId) // Deleting the existing records to allow for clean update
-		if err != nil {
-			tx.Rollback()
-			return fmt.Errorf("failed to delete job experiences: %w", err)
-		}
-	}
-
-	_, err = executeNonQuery(ctx, tx, deleteJobsQuery, personId) // Deleting the existing records to allow for clean update
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to delete jobs: %w", err)
+	if err = deleteExistingJobsAndExperiences(ctx, tx, personId, selectJobIdsQuery, deleteJobsStmt, deleteJobExperiencesStmt); err != nil {
+		return err
 	}
 
 	for _, job := range jobs {
 		// Insert employer and get the ID
-		employerId, err := executeNonQuery(ctx, tx, employerQuery, job.Employer, job.Location)
+		employerId, err := executeNonQuery(ctx, tx, insertEmployerStmt, job.Employer, job.Location)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("failed to insert employer: %w", err)
 		}
 
 		// Insert job and get the ID
-		jobId, err := executeNonQuery(ctx, tx, jobQuery, personId, employerId, job.Duration, job.Title, job.Technologies)
+		jobId, err := executeNonQuery(ctx, tx, insertJobStmt, personId, employerId, job.Duration, job.Title, job.Technologies)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("failed to insert job: %w", err)
 		}
 
-		// Insert job experiences
+		// Insert job_experiences
 		for _, experience := range job.Experiences {
-			_, err := executeNonQuery(ctx, tx, experienceQuery, jobId, experience)
+			_, err := executeNonQuery(ctx, tx, insertExperienceStmt, jobId, experience)
 			if err != nil {
 				tx.Rollback()
 				return fmt.Errorf("failed to insert job_experience: %w", err)
@@ -267,7 +274,34 @@ func InsertJobs(db *sql.DB, ctx context.Context, employerQuery, jobQuery, experi
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	log.Print("InsertJobs")
+	log.Print("Jobs inserted successfuly")
+
+	return nil
+}
+
+// deleteExistingJobsAndExperiences deletes all the job and job_experience entries which correspond with the personId.
+func deleteExistingJobsAndExperiences(ctx context.Context, tx *sql.Tx, personId int, selectJobIdsQuery, deleteJobsStmt, deleteJobExperiencesStmt string) error {
+	rows, err := db.QueryContext(ctx, selectJobIdsQuery, personId)
+	if err != nil {
+		return fmt.Errorf("error retrieving job.id: %w", err)
+	}
+
+	for rows.Next() {
+		var jobId int
+		rows.Scan(&jobId)
+
+		_, err = executeNonQuery(ctx, tx, deleteJobExperiencesStmt, jobId)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to delete job experiences: %w", err)
+		}
+	}
+
+	_, err = executeNonQuery(ctx, tx, deleteJobsStmt, personId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete jobs: %w", err)
+	}
 
 	return nil
 }
@@ -322,37 +356,18 @@ func SelectProjects(db *sql.DB, ctx context.Context, query string, personId int)
 		projects = append(projects, project)
 	}
 
-	log.Print("SelectProjects")
-
+	log.Print("Projects selected successfully")
 	return projects, nil
 }
 
-func InsertProjects(db *sql.DB, ctx context.Context, projectQuery, contributionQuery, deleteProjectsQuery, deleteContributionsQuery string, projects []Project, personId int) error {
+func InsertProjects(db *sql.DB, ctx context.Context, insertProjectStmt, insertContributionStmt, selectProjectsQuery, deleteProjectsStmt, deleteContributionsStmt string, projects []Project, personId int) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	rows, err := db.QueryContext(ctx, "SELECT id FROM project WHERE person_id = ?", personId)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve project.id: %w", err)
-	}
-
-	for rows.Next() {
-		var projectId int
-		rows.Scan(&projectId)
-
-		_, err = executeNonQuery(ctx, tx, deleteContributionsQuery, projectId) // Deleting the existing records to allow for clean update
-		if err != nil {
-			tx.Rollback()
-			return fmt.Errorf("failed to delete contributions: %w", err)
-		}
-	}
-
-	_, err = executeNonQuery(ctx, tx, deleteProjectsQuery, personId) // Deleting the existing records to allow for clean update
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to delete projects: %w", err)
+	if err = deleteExistingProjectsAndContributions(ctx, tx, personId, selectProjectsQuery, deleteProjectsStmt, deleteContributionsStmt); err != nil {
+		return err
 	}
 
 	for _, project := range projects {
@@ -360,7 +375,7 @@ func InsertProjects(db *sql.DB, ctx context.Context, projectQuery, contributionQ
 		projectId, err := executeNonQuery(
 			ctx,
 			tx,
-			projectQuery,
+			insertProjectStmt,
 			personId,
 			project.Name,
 			project.Repository,
@@ -373,7 +388,7 @@ func InsertProjects(db *sql.DB, ctx context.Context, projectQuery, contributionQ
 
 		// Insert into project_contribution
 		for _, contribution := range project.Contributions {
-			_, err := executeNonQuery(ctx, tx, contributionQuery, projectId, contribution)
+			_, err := executeNonQuery(ctx, tx, insertContributionStmt, projectId, contribution)
 			if err != nil {
 				tx.Rollback()
 				return fmt.Errorf("failed to insert project_contribution: %w", err)
@@ -385,7 +400,33 @@ func InsertProjects(db *sql.DB, ctx context.Context, projectQuery, contributionQ
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	log.Print("InsertProjects")
+	log.Print("Projects inserted successfully")
+	return nil
+}
+
+// deleteExistingProjectsAndContributions deletes all the project and project_contribution entries which correspond with the personId.
+func deleteExistingProjectsAndContributions(ctx context.Context, tx *sql.Tx, personId int, selectProjectsQuery, deleteProjectsStmt, deleteContributionsStmt string) error {
+	rows, err := db.QueryContext(ctx, selectProjectsQuery, personId)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve project.id: %w", err)
+	}
+
+	for rows.Next() {
+		var projectId int
+		rows.Scan(&projectId)
+
+		_, err = executeNonQuery(ctx, tx, deleteProjectsStmt, projectId)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to delete contributions: %w", err)
+		}
+	}
+
+	_, err = executeNonQuery(ctx, tx, deleteContributionsStmt, personId)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete projects: %w", err)
+	}
 
 	return nil
 }
@@ -417,18 +458,17 @@ func SelectCertifications(db *sql.DB, ctx context.Context, query string, personI
 		return nil, err
 	}
 
-	log.Print("SelectCertifications")
-
+	log.Print("Certification selected successfully")
 	return certifications, nil
 }
 
-func InsertCertifications(db *sql.DB, ctx context.Context, orgQuery, certQuery, deleteCertsQuery string, certs []Certification, personId int) error {
+func InsertCertifications(db *sql.DB, ctx context.Context, insertOrgStmt, insertCertStmt, deleteCertsStmt string, certs []Certification, personId int) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	_, err = executeNonQuery(ctx, tx, deleteCertsQuery, personId) // Deleting the existing records to allow for clean update
+	_, err = executeNonQuery(ctx, tx, deleteCertsStmt, personId) // Deleting the existing records to allow for clean update
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to delete certification: %w", err)
@@ -436,14 +476,14 @@ func InsertCertifications(db *sql.DB, ctx context.Context, orgQuery, certQuery, 
 
 	for _, cert := range certs {
 		// Insert into certifying_org
-		orgId, err := executeNonQuery(ctx, tx, orgQuery, cert.Organization)
+		orgId, err := executeNonQuery(ctx, tx, insertOrgStmt, cert.Organization)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("failed to insert certifying_org: %w", err)
 		}
 
 		// Insert into certification
-		_, err = executeNonQuery(ctx, tx, certQuery, int(orgId), personId, cert.Certification, cert.Expiration)
+		_, err = executeNonQuery(ctx, tx, insertCertStmt, int(orgId), personId, cert.Certification, cert.Expiration)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("failed to insert certification: %w", err)
@@ -454,7 +494,6 @@ func InsertCertifications(db *sql.DB, ctx context.Context, orgQuery, certQuery, 
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	log.Print("InsertCertifications")
-
+	log.Print("Certification inserted successfully")
 	return nil
 }
