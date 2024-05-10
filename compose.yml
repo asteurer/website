@@ -20,6 +20,7 @@ services:
     container_name: app
     shm_size: 128mb
     environment:
+      DOMAIN: ${DOMAIN}
       DATABASE_HOST: database
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}

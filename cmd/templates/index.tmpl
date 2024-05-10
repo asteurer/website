@@ -63,7 +63,7 @@
         </li>
 
         {{ range .Names }}
-            <li><a href="http://asteurer.com/resume/{{ .FirstName }}/{{ .LastName }}"> 
+            <li><a href="http://{{ .Domain }}/resume/{{ .FirstName }}/{{ .LastName }}"> 
                 {{ .FirstName }} {{ .LastName }}</a>
         {{ end }}
 

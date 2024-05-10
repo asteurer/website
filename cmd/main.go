@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -184,8 +185,14 @@ func getIndexHTML(c *gin.Context) {
 		return
 	}
 
+	domain, exists := os.LookupEnv("DOMAIN")
+	if !exists {
+		c.HTML(http.StatusInternalServerError, "error.tmpl", gin.H{"error": "environment variable 'DOMAIN' does not exist"})
+	}
+
 	c.HTML(200, "index.tmpl", gin.H{
-		"Names": names,
+		"Names":  names,
+		"Domain": domain,
 	})
 }
 
